@@ -1,0 +1,22 @@
+# --- Python / Backend ---
+backend/venv/
+backend/.env
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Supabase ---
+supabase/.temp/
+supabase/.branches/
+supabase/.env.local
+supabase/pull_migrations/
+
+# --- Environment Secrets ---
+.env
+.env.local
+.env.*.local
+.env.keys
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db

@@ -1,0 +1,12 @@
+# Web Framework & Server
+fastapi==0.135.1
+uvicorn==0.41.0
+
+# Database & Environment
+supabase==2.28.0
+python-dotenv==1.2.2
+
+# AI & Orchestration
+langchain==1.2.10
+langchain-openai==1.1.10
+pydantic==2.12.5
