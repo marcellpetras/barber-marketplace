@@ -38,6 +38,13 @@ class ParsedIntent(BaseModel):
     preferences: Optional[List[str]] = Field(description="Style specifics like 'skin fade' or 'long hair'")
     is_urgent: bool = Field(description="Is the user asking for something ASAP?")
 
+# Define the bid submission schema for barbers
+class BidSubmission(BaseModel):
+    auction_id: str = Field(description="The UUID of the active auction")
+    barber_id: str = Field(description="The UUID of the barber placing the bid")
+    price: float = Field(gt=0, description="The proposed price (must be greater than 0)")
+    eta_minutes: int = Field(ge=0, description="Estimated time of arrival or wait time in minutes")
+
 # Parsing logic
 async def parse_user_text(text: str) -> ParsedIntent:
     parser = JsonOutputParser(pydantic_object=ParsedIntent) 
@@ -60,18 +67,18 @@ async def parse_user_text(text: str) -> ParsedIntent:
 
 
 
-# *************** API Endpoint ***************
+# *************** API Endpoints ***************
 
 @app.post("/broadcast") #listen for POST requests at /broadcast
 async def broadcast_request(user_id: str, text: str, lat: float, lng: float):
 
-    # Step A: ---> AI Parsing
+    # Step 1: ---> AI Parsing
     try:
         parsed = await parse_user_text(text)
     except Exception:
         raise HTTPException(status_code=422, detail="AI could not understand intent")
 
-    # Step B: ---> Prep Spatial/Temporal data for our SQL Schema
+    # Step 2: ---> Prep Spatial/Temporal data for our SQL Schema
     # PostGIS expects 'POINT(lng lat)'
 
     point = f"POINT({lng} {lat})"
@@ -80,7 +87,7 @@ async def broadcast_request(user_id: str, text: str, lat: float, lng: float):
     scheduled_at = datetime.now() + timedelta(hours=1)
     expires_at = datetime.now() + timedelta(minutes=10)
 
-    # Step C: ---> Insert into the 'auctions' table
+    # Step 3: ---> Insert into the 'auctions' table
     auction_data = {
         "customer_id": user_id,
         "service_category": parsed["service_category"],
@@ -93,7 +100,7 @@ async def broadcast_request(user_id: str, text: str, lat: float, lng: float):
 
     result = await supabase.table("auctions").insert(auction_data).execute() 
     
-    # Step D: ---> Check how many barbers we are about to notify
+    # Step 4: ---> Check how many barbers we are about to notify
     nearby = await supabase.rpc('get_eligible_barbers', { #triggers the specified SQL funtion and returns the list
         'user_lat': lat, 
         'user_lng': lng, 
@@ -106,3 +113,50 @@ async def broadcast_request(user_id: str, text: str, lat: float, lng: float):
         "notified_barbers": len(nearby.data),
         "ai_parsed_as": parsed
     }
+
+@app.post("/bid")
+async def submit_bid(bid: BidSubmission):
+    
+    # Step 1: Verify the auction exists and is actually open
+    auction_res = await supabase.table("auctions").select("status").eq("id", bid.auction_id).execute()
+    
+    if not auction_res.data:
+        raise HTTPException(status_code=404, detail="Auction not found")
+        
+    if auction_res.data[0]["status"] != "open":
+        raise HTTPException(status_code=400, detail="This auction is no longer open for bidding")
+
+    # Step 2: Insert the bid
+    try:
+        # Convert the Pydantic model to a dictionary for Supabase
+        bid_data = bid.model_dump()
+        
+        result = await supabase.table("bids").insert(bid_data).execute()
+        
+        return {
+            "status": "Bid successfully placed",
+            "bid_id": result.data[0]["id"],
+            "auction_id": bid.auction_id,
+            "price": bid.price,
+            "eta_minutes": bid.eta_minutes
+        }
+        
+    except Exception as e:
+        error_msg = str(e)
+        # Catch the specific unique constraint violation from PostgreSQL
+        if "unique_barber_bid" in error_msg or "23505" in error_msg:
+            raise HTTPException(
+                status_code=400, 
+                detail="You have already placed a bid on this auction."
+            )
+        # Catch foreign key violations (e.g., Barber doesn't exist)
+        elif "23503" in error_msg:
+            raise HTTPException(
+                status_code=400, 
+                detail="Invalid barber ID or auction ID."
+            )
+        # Generic fallback
+        raise HTTPException(status_code=500, detail="An error occurred while placing the bid.")
+
+
+        
