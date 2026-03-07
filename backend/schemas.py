@@ -41,3 +41,21 @@ class BidResponse(BaseModel):
     auction_id: str
     price: float
     eta_minutes: int
+
+
+class BidItem(BaseModel):
+    id: str
+    auction_id: str
+    barber_id: str
+    price: float
+    eta_minutes: int
+    status: str
+    created_at: str
+
+
+class AuctionBidsResponse(BaseModel):
+    bids: List[BidItem]
+
+
+class BidAcceptRequest(BaseModel):
+    bid_id: str = Field(description="The UUID of the winning bid to accept")

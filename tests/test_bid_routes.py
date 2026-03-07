@@ -111,3 +111,40 @@ def test_bid_duplicate_bid(client, monkeypatch):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "You have already placed a bid on this auction."
+
+
+def test_list_auction_bids(client, monkeypatch):
+    async def mock_get_bids_for_auction(auction_id: str):
+        return [
+            {
+                "id": "bid-123",
+                "auction_id": auction_id,
+                "barber_id": "barber-456",
+                "price": 25.0,
+                "eta_minutes": 15,
+                "status": "pending",
+                "created_at": "2026-03-08T00:00:00Z"
+            }
+        ]
+
+    monkeypatch.setattr("backend.routers.bids.get_bids_for_auction", mock_get_bids_for_auction)
+
+    response = client.get("/auction/auction-123/bids")
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["bids"]) == 1
+    assert body["bids"][0]["id"] == "bid-123"
+
+
+def test_accept_bid_success(client, monkeypatch):
+    async def mock_accept_winning_bid(auction_id: str, bid_id: str):
+        return None
+
+    monkeypatch.setattr("backend.routers.bids.accept_winning_bid", mock_accept_winning_bid)
+
+    response = client.post(
+        "/auction/auction-123/accept",
+        json={"bid_id": "bid-123"}
+    )
+    assert response.status_code == 200
+    assert response.json() == {"status": "success", "message": "Bid accepted and auction closed"}

@@ -56,3 +56,44 @@ async def create_bid(bid: BidSubmission) -> str:
             status_code=500,
             detail="An error occurred while placing the bid.",
         )
+
+
+async def get_bids_for_auction(auction_id: str) -> list[dict]:
+    client = get_supabase_client()
+    
+    result = await client.table("bids").select("*").eq("auction_id", auction_id).execute()
+    
+    return result.data or []
+
+
+async def accept_winning_bid(auction_id: str, bid_id: str) -> None:
+    client = get_supabase_client()
+
+    # Verify the auction is still open
+    status = await get_auction_status(auction_id)
+    ensure_auction_open(status)
+
+    # Begin the process of accepting the bid
+    # First, verify the bid belongs to this auction
+    bid_result = await client.table("bids").select("id").eq("id", bid_id).eq("auction_id", auction_id).execute()
+    if not bid_result.data:
+        raise HTTPException(status_code=404, detail="Bid not found for this auction")
+
+    # We update the accepted bid
+    update_bid_res = await client.table("bids").update({"status": "accepted"}).eq("id", bid_id).execute()
+    if not update_bid_res.data:
+        raise HTTPException(status_code=500, detail="Failed to accept the bid")
+
+    # Update all other bids to rejected
+    await client.table("bids").update({"status": "rejected"}).eq("auction_id", auction_id).neq("id", bid_id).execute()
+
+    # Update the auction itself
+    update_auction_res = await client.table("auctions").update({
+        "status": "accepted",
+        "winning_bid_id": bid_id
+    }).eq("id", auction_id).execute()
+
+    if not update_auction_res.data:
+        # In a fully transactional system, we'd rollback. Since we use supabase postgrest,
+        # we try our best. This point would mean DB schema is probably misaligned.
+        raise HTTPException(status_code=500, detail="Failed to update auction status")
