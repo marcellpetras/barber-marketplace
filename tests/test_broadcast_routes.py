@@ -1,7 +1,4 @@
 from datetime import datetime, timezone
-
-from fastapi import HTTPException
-
 from backend.schemas import ParsedIntent
 
 
