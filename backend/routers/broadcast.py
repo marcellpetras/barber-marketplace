@@ -22,15 +22,15 @@ async def broadcast_request(req: BroadcastRequest):
 
     point = f"POINT({req.lng} {req.lat})"
 
-    requested_at, service_time, expires_at = resolve_request_times(parsed)
+    request_created_at, service_time, request_expires_at = resolve_request_times(parsed)
 
     payload = build_auction_payload(
         req=req,
         parsed=parsed,
         point=point,
-        requested_at=requested_at,
+        request_created_at=request_created_at,
         service_time=service_time,
-        expires_at=expires_at,
+        request_expires_at=request_expires_at,
     )
 
     auction_id = await create_auction(payload)
@@ -41,4 +41,7 @@ async def broadcast_request(req: BroadcastRequest):
         auction_id=auction_id,
         notified_barbers=notified_barbers,
         ai_parsed_as=parsed,
+        request_created_at=request_created_at,
+        request_expires_at=request_expires_at,
+        service_scheduled_at=service_time,
     )

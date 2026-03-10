@@ -15,7 +15,7 @@ begin
   update public.auctions
   set status = 'expired'
   where status = 'open'
-    and expires_at <= now();
+    and request_expires_at  <= now();
 
   get diagnostics updated_count = row_count;
   return updated_count;

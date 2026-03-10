@@ -31,7 +31,7 @@ async def parse_user_text(text: str) -> ParsedIntent:
 
 
 def resolve_request_times(parsed: ParsedIntent):
-    requested_at = datetime.now(timezone.utc)
+    request_created_at = datetime.now(timezone.utc)
 
     service_time = None
     if parsed.requested_time:
@@ -39,34 +39,41 @@ def resolve_request_times(parsed: ParsedIntent):
             service_time = datetime.fromisoformat(parsed.requested_time)
             if service_time.tzinfo is None:
                 service_time = service_time.replace(tzinfo=timezone.utc)
+
+            if service_time < request_created_at:
+                raise HTTPException(
+                    status_code=422,
+                    detail="requested_time cannot be in the past",
+                )
+            
         except ValueError:
             raise HTTPException(
                 status_code=422,
                 detail="invalid extracted requested_time format",
             )
 
-    max_expiry = requested_at + timedelta(hours=settings.default_expiry_hours)
-    expires_at = min(max_expiry, service_time) if service_time else max_expiry
+    max_expiry = request_created_at + timedelta(hours=settings.default_expiry_hours)
+    request_expires_at = min(max_expiry, service_time) if service_time else max_expiry
 
-    return requested_at, service_time, expires_at
+    return request_created_at, service_time, request_expires_at
 
 
 def build_auction_payload(
     req: BroadcastRequest,
     parsed: ParsedIntent,
     point: str,
-    requested_at: datetime,
+    request_created_at: datetime,
     service_time: Optional[datetime],
-    expires_at: datetime,
+    request_expires_at: datetime,
 ) -> dict:
     return {
         "customer_id": req.user_id,
         "service_category": parsed.service_category,
         "structured_intent": parsed.model_dump(),
         "location": point,
-        "created_at": requested_at.isoformat(),
-        "scheduled_at": service_time.isoformat() if service_time else None,
-        "expires_at": expires_at.isoformat(),
+        "request_created_at": request_created_at.isoformat(),
+        "service_scheduled_at": service_time.isoformat() if service_time else None,
+        "request_expires_at": request_expires_at.isoformat(),
         "status": "open",
     }
 
