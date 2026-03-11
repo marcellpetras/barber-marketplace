@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 
-from backend.schemas import BroadcastRequest, BroadcastResponse, CurrentUser
+from backend.schemas import BroadcastRequest, BroadcastResponse, CurrentActor
 from backend.services.broadcast import (
     build_auction_payload,
     create_auction,
@@ -18,7 +18,7 @@ router = APIRouter(tags=["broadcast"])
 @router.post("/broadcast", response_model=BroadcastResponse)
 async def broadcast_request(
     req: BroadcastRequest,
-    actor: CurrentUser = Depends(get_current_actor)):
+    actor: CurrentActor = Depends(get_current_actor)):
 
     if actor.role != 'customer':
         raise HTTPException(status_code=403, detail="Only customers can create broadcast requests") 
@@ -39,7 +39,7 @@ async def broadcast_request(
         request_created_at=request_created_at,
         service_time=service_time,
         request_expires_at=request_expires_at,
-        user_id = actor.user_id
+        customer_id=actor.user_id
     )
 
     auction_id = await create_auction(payload)

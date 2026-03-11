@@ -49,33 +49,26 @@ def get_bearer_token(authorization: Optional[str] = Header()): #assuming bearer 
     return token.strip()
 
 
-def get_current_actor(authorization: Optional[str] = Header()):
+async def get_current_actor(authorization: Optional[str] = Header()):
     #assuming format is "Authorization: bearer customer_id:customer_role"
 
     token = get_bearer_token(authorization)
+    client = get_supabase_client()
+    auth_response = await client.auth.get_user(token)
+    user = auth_response.user
 
-    user_id, sep, role = token.partition(":")
+    if not user:
+        raise HTTPException(status_code=401, detail='Invalid token')
+    
+    profile_result = await client.table('profiles').select('id, role').eq('id',user.id).execute()
 
-    if not sep:
-        raise HTTPException(
-            status_code=401,
-            detail="Token must be in format <user_id>:<role>",
-        )
-    if not user_id.strip():
-        raise HTTPException(status_code=401, detail="Missing user id in token")
-
-    role = role.strip().lower()
-
-    if role not in {"customer", "barber"}: #should we read possbile roles from db ? instead of hardcoding here
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid role",
-        )
-
+    if not profile_result.data:
+        raise HTTPException(status_code =403, detail='Profile not found')
+    
+    profile = profile_result.data[0]
     return CurrentActor(
-        user_id=user_id.strip(),
-        role=role,
+        user_id = profile['id'],
+        role = profile['role']
     )
-
 
 

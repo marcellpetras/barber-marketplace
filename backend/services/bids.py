@@ -185,3 +185,20 @@ async def accept_winning_bid(auction_id: str, bid_id: str) -> None:
             status_code=500,
             detail="An error occurred while accepting the bid.",
         )
+
+async def ensure_customer_owns_auction(auction_id: str, customer_id: str) -> None:
+    client = get_supabase_client()
+
+    result = (
+        await client.table("auctions")
+        .select("id")
+        .eq("id", auction_id)
+        .eq("customer_id", customer_id)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Auction not found",
+        )

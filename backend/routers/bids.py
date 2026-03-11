@@ -6,7 +6,7 @@ from backend.schemas import (
     BidSubmission, 
     AuctionBidsResponse,
     BidAcceptRequest,
-    CurrentUser
+    CurrentActor
     )
 
 from backend.services.bids import (
@@ -15,6 +15,7 @@ from backend.services.bids import (
     get_auction_status, 
     get_bids_for_auction, 
     accept_winning_bid,
+    ensure_customer_owns_auction
     )
 
 from backend.dependencies import get_current_actor
@@ -26,7 +27,7 @@ router = APIRouter(tags=["bids"])
 @router.post("/bid", response_model=BidResponse)
 async def submit_bid(
     bid: BidSubmission, 
-    actor: CurrentUser = Depends(get_current_actor)):
+    actor: CurrentActor = Depends(get_current_actor)):
 
     if actor.role != 'barber':
         raise HTTPException(status_code=403, detail="Only barbers can palce bids ") 
@@ -53,12 +54,20 @@ async def submit_bid(
 
 
 @router.get("/auction/{auction_id}/bids", response_model=AuctionBidsResponse)
-async def list_auction_bids(auction_id: str):
+async def list_auction_bids(auction_id: str, actor: CurrentActor = Depends(get_current_actor)):
+    if actor.role != "customer":
+        raise HTTPException(status_code=403, detail="Only customers can view auction bids")
+
+    await ensure_customer_owns_auction(auction_id, actor.user_id)
     bids_data = await get_bids_for_auction(auction_id)
     return AuctionBidsResponse(bids=bids_data)
 
 
 @router.post("/auction/{auction_id}/accept")
-async def accept_bid(auction_id: str, request: BidAcceptRequest):
+async def accept_bid(auction_id: str, request: BidAcceptRequest, actor: CurrentActor = Depends(get_current_actor)):
+    if actor.role != "customer":
+        raise HTTPException(status_code=403, detail="Only customers can accept bids")
+
+    await ensure_customer_owns_auction(auction_id, actor.user_id)
     await accept_winning_bid(auction_id, request.bid_id)
     return {"status": "success", "message": "Bid accepted and auction closed"}
