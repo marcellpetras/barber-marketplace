@@ -1,18 +1,47 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.schemas import BidResponse, BidSubmission, AuctionBidsResponse, BidAcceptRequest
-from backend.services.bids import create_bid, ensure_auction_open, get_auction_status, get_bids_for_auction, accept_winning_bid
+from backend.schemas import (
+    BidCreate,
+    BidResponse, 
+    BidSubmission, 
+    AuctionBidsResponse,
+    BidAcceptRequest,
+    CurrentUser
+    )
+
+from backend.services.bids import (
+    create_bid, 
+    ensure_auction_open, 
+    get_auction_status, 
+    get_bids_for_auction, 
+    accept_winning_bid,
+    )
+
+from backend.dependencies import get_current_actor
 
 
 router = APIRouter(tags=["bids"])
 
 
 @router.post("/bid", response_model=BidResponse)
-async def submit_bid(bid: BidSubmission):
+async def submit_bid(
+    bid: BidSubmission, 
+    actor: CurrentUser = Depends(get_current_actor)):
+
+    if actor.role != 'barber':
+        raise HTTPException(status_code=403, detail="Only barbers can palce bids ") 
+
     status = await get_auction_status(bid.auction_id)
     ensure_auction_open(status)
 
-    bid_id = await create_bid(bid)
+    payload = BidCreate(
+    auction_id=bid.auction_id,
+    barber_id=actor.user_id,
+    price=bid.price,
+    eta_minutes=bid.eta_minutes,
+    )
+
+    bid_id = await create_bid(payload)
 
     return BidResponse(
         status="Bid successfully placed",

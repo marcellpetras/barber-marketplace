@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 
 from backend.dependencies import get_supabase_client
-from backend.schemas import BidSubmission
+from backend.schemas import BidCreate
 import random #temmporarily
+
 
 
 async def get_auction_status(auction_id: str) -> str:
@@ -26,7 +27,7 @@ def ensure_auction_open(status: str) -> None:
         )
 
 
-async def create_bid(bid: BidSubmission) -> str:
+async def create_bid(bid: BidCreate) -> str:
     """Insert a new bid and map common database errors to HTTP responses."""
     client = get_supabase_client()
 
