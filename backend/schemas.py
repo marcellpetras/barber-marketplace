@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -16,7 +16,6 @@ class ParsedIntent(BaseModel):
 
 
 class BroadcastRequest(BaseModel):
-    user_id: str
     text: str = Field(min_length=1, max_length=500)
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
@@ -29,15 +28,19 @@ class BroadcastResponse(BaseModel):
     ai_parsed_as: ParsedIntent
     request_created_at: datetime 
     request_expires_at: datetime 
-    service_scheduled_at: datetime 
+    service_scheduled_at: Optional[datetime] 
 
 
 class BidSubmission(BaseModel):
     auction_id: str = Field(description="The UUID of the active auction")
-    barber_id: str = Field(description="The UUID of the barber placing the bid")
     price: float = Field(gt=0, description="The proposed price (must be greater than 0)")
     eta_minutes: int = Field(ge=0, description="Estimated time of arrival or wait time in minutes")
 
+class BidCreate(BaseModel):
+    auction_id: str
+    barber_id: str
+    price: float
+    eta_minutes: int
 
 class BidResponse(BaseModel):
     status: str
@@ -66,3 +69,9 @@ class AuctionBidsResponse(BaseModel):
 
 class BidAcceptRequest(BaseModel):
     bid_id: str = Field(description="The UUID of the winning bid to accept")
+
+
+class CurrentActor(BaseModel): #actor model for auth context
+    user_id: str
+    role: Literal['customer', 'barber']
+    

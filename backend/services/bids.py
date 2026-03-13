@@ -1,8 +1,9 @@
 from fastapi import HTTPException
 
 from backend.dependencies import get_supabase_client
-from backend.schemas import BidSubmission
+from backend.schemas import BidCreate
 import random #temmporarily
+
 
 
 async def get_auction_status(auction_id: str) -> str:
@@ -26,7 +27,7 @@ def ensure_auction_open(status: str) -> None:
         )
 
 
-async def create_bid(bid: BidSubmission) -> str:
+async def create_bid(bid: BidCreate) -> str:
     """Insert a new bid and map common database errors to HTTP responses."""
     client = get_supabase_client()
 
@@ -183,4 +184,21 @@ async def accept_winning_bid(auction_id: str, bid_id: str) -> None:
         raise HTTPException(
             status_code=500,
             detail="An error occurred while accepting the bid.",
+        )
+
+async def ensure_customer_owns_auction(auction_id: str, customer_id: str) -> None:
+    client = get_supabase_client()
+
+    result = (
+        await client.table("auctions")
+        .select("id")
+        .eq("id", auction_id)
+        .eq("customer_id", customer_id)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Auction not found",
         )

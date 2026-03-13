@@ -65,9 +65,10 @@ def build_auction_payload(
     request_created_at: datetime,
     service_time: Optional[datetime],
     request_expires_at: datetime,
+    customer_id: str,
 ) -> dict:
     return {
-        "customer_id": req.user_id,
+        "customer_id": customer_id,
         "service_category": parsed.service_category,
         "structured_intent": parsed.model_dump(),
         "location": point,
