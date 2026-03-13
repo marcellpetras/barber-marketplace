@@ -1,5 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 class ParsedIntent(BaseModel):
     service_category: str = Field(description="Service type, e.g., 'haircut', 'shave'")
@@ -26,6 +27,9 @@ class BroadcastResponse(BaseModel):
     auction_id: str
     notified_barbers: int
     ai_parsed_as: ParsedIntent
+    request_created_at: datetime 
+    request_expires_at: datetime 
+    service_scheduled_at: datetime 
 
 
 class BidSubmission(BaseModel):
@@ -42,19 +46,22 @@ class BidResponse(BaseModel):
     price: float
     eta_minutes: int
 
-
-class BidItem(BaseModel):
+class RankedBidItem(BaseModel):
     id: str
     auction_id: str
     barber_id: str
+    barber_name: str
+    barber_rating: float
     price: float
     eta_minutes: int
+    distance_meters: float
     status: str
     created_at: str
+    score: float
 
 
 class AuctionBidsResponse(BaseModel):
-    bids: List[BidItem]
+    bids: List[RankedBidItem]
 
 
 class BidAcceptRequest(BaseModel):

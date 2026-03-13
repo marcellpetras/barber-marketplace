@@ -23,9 +23,9 @@ def test_broadcast_success(client, monkeypatch):
             "service_category": parsed.service_category,
             "structured_intent": parsed.model_dump(),
             "location": point,
-            "created_at": requested_at.isoformat(),
-            "scheduled_at": None,
-            "expires_at": expires_at.isoformat(),
+            "request_created_at": requested_at.isoformat(),
+            "service_scheduled_at": service_time.isoformat() if service_time else None,
+            "request_expires_at": expires_at.isoformat(),
             "status": "open",
         }
 
