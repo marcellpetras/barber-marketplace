@@ -17,15 +17,15 @@ def test_broadcast_success(client, monkeypatch):
         now = datetime.now(timezone.utc)
         return now, None, now
 
-    def mock_build_auction_payload(req, parsed, point, requested_at, service_time, expires_at):
+    def mock_build_auction_payload(req, parsed, point, request_created_at, service_time, request_expires_at):
         return {
             "customer_id": req.user_id,
             "service_category": parsed.service_category,
             "structured_intent": parsed.model_dump(),
             "location": point,
-            "request_created_at": requested_at.isoformat(),
+            "request_created_at": request_created_at.isoformat(),
             "service_scheduled_at": service_time.isoformat() if service_time else None,
-            "request_expires_at": expires_at.isoformat(),
+            "request_expires_at": request_expires_at.isoformat(),
             "status": "open",
         }
 

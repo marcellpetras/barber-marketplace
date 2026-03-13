@@ -29,7 +29,7 @@ class BroadcastResponse(BaseModel):
     ai_parsed_as: ParsedIntent
     request_created_at: datetime 
     request_expires_at: datetime 
-    service_scheduled_at: datetime 
+    service_scheduled_at: Optional[datetime] = None 
 
 
 class BidSubmission(BaseModel):
@@ -66,3 +66,33 @@ class AuctionBidsResponse(BaseModel):
 
 class BidAcceptRequest(BaseModel):
     bid_id: str = Field(description="The UUID of the winning bid to accept")
+
+
+class AuctionResponse(BaseModel):
+    auction_id: str
+    customer_id: str
+    service_category: str
+    structured_intent: Optional[dict] = None
+    db_created_at: Optional[datetime] = None
+    service_scheduled_at: Optional[datetime] = None
+    request_expires_at: Optional[datetime] = None
+    request_created_at: Optional[datetime] = None
+    status: str
+    distance_meters: Optional[float] = None
+    winning_bid_id: Optional[str] = None
+
+class AuctionListResponse(BaseModel):
+    auctions: List[AuctionResponse]
+
+class BidWithAuctionResponse(BaseModel):
+    bid_id: str
+    auction_id: str
+    barber_id: str
+    price: float
+    eta_minutes: int
+    created_at: datetime
+    status: str
+    auction: Optional[AuctionResponse] = None
+
+class BidListResponse(BaseModel):
+    bids: List[BidWithAuctionResponse]

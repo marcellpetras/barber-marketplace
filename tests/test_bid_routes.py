@@ -123,7 +123,12 @@ def test_list_auction_bids(client, monkeypatch):
                 "price": 25.0,
                 "eta_minutes": 15,
                 "status": "pending",
-                "created_at": "2026-03-08T00:00:00Z"
+                "status": "pending",
+                "created_at": "2026-03-08T00:00:00Z",
+                "distance_meters": 500.0,
+                "barber_name": "Test Barber",
+                "barber_rating": 4.5,
+                "score": 0.85
             }
         ]
 

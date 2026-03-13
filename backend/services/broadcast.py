@@ -61,7 +61,8 @@ def resolve_request_times(parsed: ParsedIntent):
 def build_auction_payload(
     req: BroadcastRequest,
     parsed: ParsedIntent,
-    point: str,
+    lng: float,
+    lat: float,
     request_created_at: datetime,
     service_time: Optional[datetime],
     request_expires_at: datetime,
@@ -70,16 +71,17 @@ def build_auction_payload(
         "customer_id": req.user_id,
         "service_category": parsed.service_category,
         "structured_intent": parsed.model_dump(),
-        "location": point,
-        "request_created_at": request_created_at.isoformat(),
-        "service_scheduled_at": service_time.isoformat() if service_time else None,
-        "request_expires_at": request_expires_at.isoformat(),
+        "location": f"SRID=4326;POINT({lng} {lat})",
+        "request_created_at": request_created_at.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
+        "service_scheduled_at": service_time.strftime('%Y-%m-%dT%H:%M:%S+00:00') if service_time else None,
+        "request_expires_at": request_expires_at.strftime('%Y-%m-%dT%H:%M:%S+00:00'),
         "status": "open",
     }
 
 
 async def create_auction(payload: dict) -> str:
     client = get_supabase_client()
+    print("DEBUG PAYLOAD:", payload, flush=True)
     result = await client.table("auctions").insert(payload).execute()
 
     if not result.data:
@@ -101,3 +103,24 @@ async def find_nearby_barbers(lat: float, lng: float) -> int:
     ).execute()
 
     return len(nearby.data or [])
+
+async def get_nearby_auctions(lat: float, lng: float, radius: float = 15000):
+    client = get_supabase_client()
+    
+    result = await client.rpc(
+        "get_nearby_open_auctions",
+        {
+            "user_lat": lat,
+            "user_lng": lng,
+            "max_radius_meters": radius,
+        },
+    ).execute()
+    
+    return result.data or []
+
+async def get_user_auctions(user_id: str):
+    client = get_supabase_client()
+    
+    result = await client.table("auctions").select("*").eq("customer_id", user_id).order("request_created_at", desc=True).execute()
+    
+    return result.data or []

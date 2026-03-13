@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from backend.schemas import BidResponse, BidSubmission, AuctionBidsResponse, BidAcceptRequest
-from backend.services.bids import create_bid, ensure_auction_open, get_auction_status, get_bids_for_auction, accept_winning_bid
+from backend.schemas import BidResponse, BidSubmission, AuctionBidsResponse, BidAcceptRequest, BidListResponse
+from backend.services.bids import create_bid, ensure_auction_open, get_auction_status, get_bids_for_auction, accept_winning_bid, get_barber_bids
 
 
 router = APIRouter(tags=["bids"])
@@ -33,3 +33,9 @@ async def list_auction_bids(auction_id: str):
 async def accept_bid(auction_id: str, request: BidAcceptRequest):
     await accept_winning_bid(auction_id, request.bid_id)
     return {"status": "success", "message": "Bid accepted and auction closed"}
+
+@router.get("/barbers/{barber_id}/bids", response_model=BidListResponse)
+async def list_barber_bids(barber_id: str):
+    """List all bids placed by a specific barber."""
+    bids_data = await get_barber_bids(barber_id)
+    return BidListResponse(bids=bids_data)

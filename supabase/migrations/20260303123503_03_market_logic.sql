@@ -18,9 +18,5 @@ CREATE TABLE bids (
   price DECIMAL(10,2) NOT NULL CHECK (price > 0),
   eta_minutes INTEGER,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT unique_barber_bid UNIQUE (auction_id, barber_id),
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected'))
+  CONSTRAINT unique_barber_bid UNIQUE (auction_id, barber_id)
 );
-
-ALTER TABLE auctions
-ADD COLUMN winning_bid_id UUID REFERENCES bids(id) ON DELETE SET NULL;

@@ -184,3 +184,32 @@ async def accept_winning_bid(auction_id: str, bid_id: str) -> None:
             status_code=500,
             detail="An error occurred while accepting the bid.",
         )
+
+async def get_barber_bids(barber_id: str):
+    """Get all bids placed by a specific barber, including the associated auction details."""
+    client = get_supabase_client()
+    
+    result = (
+        await client.table("bids")
+        .select("*, auctions!bids_auction_id_fkey(*)")
+        .eq("barber_id", barber_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    
+    # Restructure the response to match the BidWithAuctionResponse schema
+    bids = []
+    for row in (result.data or []):
+        auction = row.pop("auctions", None)
+        bid = {
+            "bid_id": row.pop("id"),
+            **row
+        }
+        if auction:
+            bid["auction"] = {
+                "auction_id": auction.pop("id"),
+                **auction
+            }
+        bids.append(bid)
+
+    return bids
